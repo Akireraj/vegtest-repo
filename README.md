@@ -125,12 +125,6 @@ descripto en la sección 8.1/8.2 del informe:
    atención → dispara alerta de stock mínimo (RF08).
 5. Consulta y muestra todos los insumos en alerta de stock mínimo.
 
-## Relación con el informe
-
-Este código corresponde a la sección 8 ("Prototipo Java + MySQL") del
-informe de la Actividad Práctica 1. El enlace a este repositorio debe
-reemplazar el placeholder `https://github.com/[usuario]/vetgest-prototipo`
-citado en la sección 8.2 del informe.
 
 ## Referencias
 
