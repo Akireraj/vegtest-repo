@@ -1,0 +1,47 @@
+@startuml
+!include _estilo.iuml
+interface "Iterable<T>" as It
+class "Nodo<T>" as Nodo {
+  ~ dato : T
+  ~ siguiente : Nodo<T>
+}
+class "ListaEnlazada<T>" as LE {
+  - cabeza : Nodo<T>
+  - ultimo : Nodo<T>
+  - tamanio : int
+  + agregar(dato) O(1)
+  + agregarAlInicio(dato) O(1)
+  + obtener(i) O(n)
+  + buscar(criterio) O(n)
+  + eliminarPrimero(criterio) O(n)
+}
+class "Cola<T>" as Cola {
+  - frente : Nodo<T>
+  - fin : Nodo<T>
+  + encolar(dato) O(1)
+  + desencolar() : T O(1)
+  + verFrente() : T
+}
+class "Pila<T>" as Pila {
+  - tope : Nodo<T>
+  + apilar(dato) O(1)
+  + desapilar() : T O(1)
+  + verTope() : T
+}
+It <|.. LE
+It <|.. Cola
+It <|.. Pila
+LE o-- Nodo
+Cola o-- Nodo
+Pila o-- Nodo
+class BaseDatosMemoria
+class Cliente
+class SalaEsperaService
+class TurnoService
+class Bitacora
+BaseDatosMemoria --> LE : tablas en memoria
+Cliente --> LE : mascotas
+SalaEsperaService --> Cola : una cola FIFO\npor veterinario
+TurnoService --> Pila : deshacer\nultima reserva
+Bitacora --> Pila : eventos LIFO
+@enduml

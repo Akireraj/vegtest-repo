@@ -1,0 +1,38 @@
+@startuml
+!include _estilo.iuml
+skinparam sequence {
+  ParticipantBackgroundColor #F4F7FC
+  ParticipantBorderColor #1F3864
+  LifeLineBorderColor #1F3864
+}
+actor "Veterinario/a" as V
+participant ":MenuAtencion" as M
+participant ":SalaEsperaService" as S
+participant ":HistoriaClinicaService" as H
+participant ":InventarioService" as I
+participant ":InventarioDAO" as D
+V -> M : opcion 1 "Atender siguiente"
+M -> S : llamarSiguiente(idVet)
+S -> S : cola.desencolar()  (FIFO)
+S --> M : turno
+M -> V : paciente, recomendacion\n(polimorfismo segun especie)
+V -> M : peso, diagnostico, tratamiento
+M -> H : registrar(new HistoriaClinica(...))
+H -> H : turno.estado.puedePasarA(ATENDIDO)
+H --> M : historia (turno ATENDIDO)
+loop mientras confirmar("Registrar insumo?")
+  V -> M : insumo y cantidad
+  M -> I : registrarConsumo(idHist, idIns, idSuc, cant, idUsr)
+  I -> D : lotesConStock(idIns, idSuc)
+  I -> I : planificarFEFO()\n(insercion por vencimiento)
+  alt stock vigente suficiente
+    I -> D : registrarMovimientos(List<Consumo>)\n[transaccion]
+    I -> D : verificarAlerta(idIns, idSuc)
+    I --> M : ResultadoConsumo (lotes, alerta?)
+    M -> V : OK / AVISO de stock minimo
+  else stock insuficiente
+    I --> M : StockInsuficienteException
+    M -> V : ERROR (se continua con el siguiente insumo)
+  end
+end
+@enduml

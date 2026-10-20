@@ -1,0 +1,81 @@
+@startuml
+!include _estilo.iuml
+abstract class Persona <<abstracta>> {
+  - id : Integer
+  - nombre : String
+  - apellido : String
+  - telefono : String
+  # Persona(id, nombre, apellido, telefono)
+  + {abstract} getTipo() : String
+  + {abstract} getDetalle() : String
+  + getNombreCompleto() : String {final}
+  + toString() : String
+}
+class Cliente {
+  - dni : String
+  - email : String
+  - mascotas : ListaEnlazada<Mascota>
+  + Cliente(id, dni, nombre, apellido, tel, email)
+  + Cliente(dni, nombre, apellido, tel, email)
+  + agregarMascota(m : Mascota)
+  + getMascotas() : ListaEnlazada<Mascota>
+}
+class Veterinario {
+  - matricula : String
+  - especialidad : String
+  - idSucursal : int
+}
+Persona <|-- Cliente
+Persona <|-- Veterinario
+
+abstract class Mascota <<abstracta>> {
+  - id : Integer
+  - idCliente : int
+  - nombre : String
+  - sexo : char
+  - fechaNacimiento : LocalDate
+  + {static} crear(especie, ...) : Mascota
+  + {abstract} getEspecie() : Especie
+  + {abstract} getDuracionConsultaMin() : int
+  + {abstract} getRecomendacionPreventiva() : String
+  + edadEnAnios(hoy) : int
+}
+class Canino {
+  + getDuracionConsultaMin() : int = 30
+}
+class Felino {
+  + getDuracionConsultaMin() : int = 30
+}
+class Exotico {
+  + getDuracionConsultaMin() : int = 45
+}
+Mascota <|-- Canino
+Mascota <|-- Felino
+Mascota <|-- Exotico
+Cliente "1" o-- "0..*" Mascota
+
+abstract class MovimientoInventario <<abstracta>> {
+  - idLote : int
+  - idUsuario : int
+  - cantidad : int
+  + {abstract} getTipo() : TipoMovimiento
+  + {abstract} getDelta() : int
+  + getIdHistoria() : Integer
+  + aplicarA(stock : int) : int {final}
+}
+class Consumo {
+  - idHistoria : int
+  + getDelta() : int = -cantidad
+  + getIdHistoria() : Integer
+}
+class Reposicion {
+  + getDelta() : int = +cantidad
+}
+MovimientoInventario <|-- Consumo
+MovimientoInventario <|-- Reposicion
+class LoteInsumo {
+  + aplicar(m : MovimientoInventario)
+  + estaVigente(hoy) : boolean
+}
+LoteInsumo ..> MovimientoInventario : usa
+@enduml

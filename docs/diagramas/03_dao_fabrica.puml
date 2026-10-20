@@ -1,0 +1,68 @@
+@startuml
+!include _estilo.iuml
+interface FabricaDAO {
+  + catalogo() : CatalogoDAO
+  + turnos() : TurnoDAO
+  + historias() : HistoriaClinicaDAO
+  + inventario() : InventarioDAO
+  + descripcion() : String
+}
+class FabricaDAOJdbc
+class FabricaDAOMemoria
+FabricaDAO <|.. FabricaDAOJdbc
+FabricaDAO <|.. FabricaDAOMemoria
+
+interface TurnoDAO {
+  + insertar(t : Turno) : int
+  + buscarPorId(id) : Optional<Turno>
+  + contarSuperpuestos(...) : int
+  + actualizarEstado(id, anterior, nuevo)
+  + actualizarFecha(id, fecha)
+  + agenda(idSuc, fecha) : List<ItemAgenda>
+}
+interface InventarioDAO {
+  + lotesConStock(idIns, idSuc) : List<LoteInsumo>
+  + registrarMovimientos(List<? extends MovimientoInventario>)
+  + alertasStockMinimo() : List<AlertaStock>
+  {method} ... (otros metodos)
+}
+interface "CatalogoDAO\nHistoriaClinicaDAO" as OTROS
+note bottom of OTROS : misma estructura:\nimplementacion JDBC\ny en memoria
+class TurnoDAOJdbc
+class TurnoDAOMemoria
+class InventarioDAOJdbc
+class InventarioDAOMemoria
+TurnoDAO <|.. TurnoDAOJdbc
+TurnoDAO <|.. TurnoDAOMemoria
+InventarioDAO <|.. InventarioDAOJdbc
+InventarioDAO <|.. InventarioDAOMemoria
+FabricaDAOJdbc --> TurnoDAOJdbc
+FabricaDAOJdbc --> InventarioDAOJdbc
+FabricaDAOMemoria --> TurnoDAOMemoria
+FabricaDAOMemoria --> InventarioDAOMemoria
+class BaseDatosMemoria {
+  ~ turnos : ListaEnlazada<Turno>
+  ~ lotes : ListaEnlazada<LoteInsumo>
+  ~ ...
+}
+TurnoDAOMemoria --> BaseDatosMemoria
+InventarioDAOMemoria --> BaseDatosMemoria
+class ConexionBD <<util>> {
+  + {static} obtener() : Connection
+}
+TurnoDAOJdbc ..> ConexionBD
+InventarioDAOJdbc ..> ConexionBD
+
+class TurnoService
+class InventarioService
+TurnoService --> TurnoDAO : depende de la\nabstraccion
+InventarioService --> InventarioDAO
+abstract class "java.time.Clock" as Clock
+class RelojSimulado {
+  - desfase : Duration
+  + ajustarA(momento)
+  + instant() : Instant
+}
+Clock <|-- RelojSimulado
+TurnoService --> Clock
+@enduml

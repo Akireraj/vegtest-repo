@@ -1,0 +1,40 @@
+@startuml
+!include _estilo.iuml
+class "java.lang.RuntimeException" as RE
+abstract class VetGestException <<abstracta>> {
+  + {abstract} getCodigo() : String
+}
+class ReglaNegocioException {
+  codigo = NEGOCIO
+}
+class TransicionInvalidaException {
+  - desde : EstadoTurno
+  - hacia : EstadoTurno
+}
+class StockInsuficienteException {
+  - disponible : int
+  - solicitado : int
+}
+class EntidadNoEncontradaException {
+  codigo = NO_ENCONTRADO
+}
+class DatoInvalidoException {
+  codigo = DATO_INVALIDO
+}
+class DatosException {
+  envuelve SQLException
+}
+class OperacionCanceladaException {
+  codigo = CANCELADA
+}
+RE <|-- VetGestException
+VetGestException <|-- ReglaNegocioException
+ReglaNegocioException <|-- TransicionInvalidaException
+ReglaNegocioException <|-- StockInsuficienteException
+VetGestException <|-- EntidadNoEncontradaException
+VetGestException <|-- DatoInvalidoException
+VetGestException <|-- DatosException
+VetGestException <|-- OperacionCanceladaException
+class "java.sql.SQLException\n(comprobada)" as SQLE
+DatosException o-- SQLE : causa
+@enduml

@@ -1,0 +1,21 @@
+skinparam dpi 200
+skinparam shadowing false
+skinparam defaultFontName Carlito
+skinparam defaultFontSize 12
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam ArrowColor #1F3864
+skinparam class {
+  BackgroundColor #F4F7FC
+  BorderColor #1F3864
+  HeaderBackgroundColor #D6E1F2
+}
+skinparam package {
+  BorderColor #1F3864
+  BackgroundColor #FBFCFE
+}
+skinparam note {
+  BackgroundColor #FFF8DC
+  BorderColor #C9A227
+}
+hide empty members

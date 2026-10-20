@@ -1,0 +1,48 @@
+@startuml
+!include _estilo.iuml
+abstract class Menu <<abstracta>> {
+  # consola : Consola
+  # sesion : Sesion
+  - titulo : String
+  # {abstract} opciones() : String[]
+  # {abstract} ejecutarOpcion(op : int)
+  # textoSalida() : String
+  + mostrar() {final}
+  - ejecutarConControl(op : int)
+  # pedirCliente() : Cliente
+  # elegirMascota(c) : Mascota
+  # elegirVeterinario() : Veterinario
+  # elegirInsumo() : Insumo
+}
+note left of Menu
+  mostrar() es un metodo plantilla:
+  do { imprimir opciones; leer 0..n;
+    try { ejecutarOpcion(op) }
+    catch (VetGestException e) { informar }
+  } while (op != 0)
+end note
+class MenuPrincipal {
+  - habilitados : List<Modulo>
+  - crearSubmenu(m : Modulo) : Menu
+}
+class MenuTurnos
+class MenuSalaEspera
+class MenuAtencion
+class MenuInventario
+class MenuConsultas
+Menu <|-- MenuPrincipal
+Menu <|-- MenuTurnos
+Menu <|-- MenuSalaEspera
+Menu <|-- MenuAtencion
+Menu <|-- MenuInventario
+Menu <|-- MenuConsultas
+MenuPrincipal ..> Menu : crea segun el rol
+enum Rol {
+  RECEPCION
+  VETERINARIO
+  STOCK
+  ADMIN
+  + puedeAcceder(m : Modulo) : boolean
+}
+MenuPrincipal ..> Rol
+@enduml
