@@ -1,0 +1,11 @@
+# Copiar este archivo como db.properties en la carpeta desde donde se ejecuta
+# VetGest (normalmente la raiz del proyecto) y completar la clave.
+# db.properties esta en .gitignore: nunca se sube al repositorio.
+
+# Desarrollo local (MySQL en la misma PC)
+db.url=jdbc:mysql://localhost:3306/vetgest_db?sslMode=DISABLED&allowPublicKeyRetrieval=true
+db.usuario=vetgest_app
+db.clave=cambiar_esta_clave
+
+# Produccion en la red PatasSanas (seccion 7.5 de la AP2): TLS obligatorio
+# db.url=jdbc:mysql://10.10.1.10:3306/vetgest_db?sslMode=REQUIRED

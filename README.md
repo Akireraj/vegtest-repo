@@ -1,132 +1,101 @@
-# VetGest — Prototipo (PatasSanas)
+# VetGest — Prototipo AP3 (PatasSanas)
 
-Prototipo operacional desarrollado para la Actividad Práctica 1 de *Análisis
-y Diseño de Software* (Proceso Unificado de Desarrollo — fase de Inicio),
-correspondiente al proyecto **VetGest** para la red de clínicas veterinarias
-**PatasSanas**.
+Sistema de gestión de turnos, historias clínicas e inventario para **PatasSanas**, una red de tres clínicas veterinarias de Córdoba. Proyecto del *Seminario de práctica de informática* (Licenciatura en Informática) — autora: **Erika Rajoy**.
 
-Siguiendo el alcance definido en el informe (sección 3.3), este prototipo
-implementa **únicamente los módulos de Turnos e Inventario**: son los que
-concentran las reglas de negocio más críticas relevadas (no superposición de
-turnos y descuento automático de stock con alerta de mínimo). El módulo de
-Historia Clínica está modelado en la base de datos (es indispensable para
-vincular el consumo de insumos a una atención concreta) pero no cuenta con
-una capa de servicio propia en esta iteración; se profundizará en las fases
-de Elaboración y Construcción, junto con la interfaz gráfica.
+| Entrega | Contenido |
+|---|---|
+| AP1 | Modelo de negocio, requerimientos, casos de uso y prototipo inicial (fase de Inicio del PUD) |
+| AP2 | Análisis, diseño, base de datos MySQL normalizada (scripts `sql/01` a `sql/06`), pruebas y comunicaciones |
+| **AP3** | **Prototipo operacional en Java con POO, menú, estructuras de datos y algoritmos** (este código) |
 
-## Stack tecnológico
+## Stack
 
-- **Lenguaje:** Java 17
-- **Persistencia:** MySQL 8.x (driver JDBC `mysql-connector-j`), base
-  `vetgest_db`
-- **Gestor de dependencias:** Maven
-- **Arquitectura:** por capas — `modelo` / `dao` (JDBC puro,
-  `PreparedStatement`, transacciones explícitas) / `servicio` (reglas de
-  negocio) / `MainApp` (escenario de prueba de consola)
-- **Patrón:** DAO (Data Access Object), tal como se justifica en la sección
-  6.3 del informe
+- Java 17 o superior · Maven · JUnit 5
+- MySQL 8.x (InnoDB, `utf8mb4`) mediante JDBC (`mysql-connector-j` 8.4)
+- Arquitectura en capas: `ui` → `servicio` → `dao` (interfaces) → `dao.jdbc` / `dao.memoria` → MySQL
 
-## Estructura del proyecto
+## Estructura
 
 ```
-vetgest-prototipo/
+vetgest/
 ├── pom.xml
-├── README.md
-├── .gitignore
-├── sql/
-│   └── vetgest_db.sql        # esquema (7 tablas) + datos de ejemplo
-└── src/main/
-    ├── resources/
-    │   ├── config.properties         # credenciales de conexión (editar)
-    │   └── config.properties.example
-    └── java/com/vetgest/
-        ├── MainApp.java               # escenario de prueba end-to-end
-        ├── config/
-        │   └── ConexionBD.java
-        ├── modelo/
-        │   ├── Mascota.java
-        │   ├── Turno.java
-        │   ├── Insumo.java
-        │   ├── HistoriaClinica.java   # clase de apoyo (ver nota abajo)
-        │   └── TipoMovimiento.java    # enum CONSUMO / REPOSICION
-        ├── dao/
-        │   ├── TurnoDAO.java          # turno + historia_clinica
-        │   └── InsumoDAO.java        # insumo + mov_inventario
-        └── servicio/
-            ├── TurnoService.java      # RF01–RF04
-            └── InventarioService.java # RF06–RF08
+├── db.properties.example      # copiar como db.properties
+├── sql/                       # 01 a 07: creación, datos, consultas, ABM, integridad, usuario, mejoras AP3
+├── docs/diagramas/            # fuentes PlantUML (.puml) e imágenes de los diagramas
+└── src/
+    ├── main/java/ar/edu/vetgest/
+    │   ├── app/          MainApp, EscenarioDemo
+    │   ├── ui/           Menu (abstracta) y submenús, Consola, Sesion
+    │   ├── servicio/     TurnoService, HistoriaClinicaService, InventarioService,
+    │   │                 SalaEsperaService, PacienteService, Bitacora
+    │   ├── dao/          interfaces + FabricaDAO
+    │   │   ├── jdbc/     implementación MySQL (PreparedStatement, transacciones)
+    │   │   └── memoria/  implementación sin base de datos (pruebas y demostración)
+    │   ├── modelo/       Persona, Cliente, Veterinario, Mascota (Canino, Felino, Exotico),
+    │   │                 Turno, EstadoTurno, MovimientoInventario (Consumo, Reposicion)...
+    │   ├── estructuras/  ListaEnlazada<T>, Cola<T>, Pila<T>
+    │   ├── algoritmos/   Ordenamiento (merge sort, inserción), Busqueda (binaria, lineal)
+    │   ├── excepcion/    jerarquía VetGestException
+    │   └── util/         ConexionBD, RelojSimulado
+    └── test/java/        35 pruebas JUnit 5
 ```
-
-> **Nota de diseño — `HistoriaClinica`:** la sección 8.1 del informe lista
-> como clases de modelo solo `Mascota`, `Turno` e `Insumo`. Sin embargo, el
-> modelo entidad-relación (Figura 5) vincula `mov_inventario` a
-> `historia_clinica` (no a `turno`), y el caso de uso "Registrar historia
-> clínica" exige generar ese registro al atender un turno. Se agregó
-> entonces una clase `HistoriaClinica` mínima, sin DAO ni servicio propios
-> (la crea internamente `TurnoDAO.registrarAtencion(...)`), para que el
-> flujo `TurnoService.atenderTurno(...) → InventarioService.registrarConsumo(...)`
-> sea consistente con el esquema de base de datos.
-
-## Requerimientos cubiertos por el prototipo
-
-| Req. | Descripción | Dónde |
-|---|---|---|
-| RF01 | Registrar turno (mascota, veterinario, fecha y hora) | `TurnoService.reservarTurno` |
-| RF02 | Rechazar turno superpuesto para el mismo veterinario/horario | `TurnoDAO.existeSuperposicion` |
-| RF03 | Confirmar, reprogramar o cancelar un turno | `TurnoService.confirmarTurno / reprogramarTurno / cancelarTurno` |
-| RF04 | Registrar historia clínica de una atención | `TurnoService.atenderTurno` |
-| RF06 | Descontar stock al registrar consumo de insumos | `InventarioService.registrarConsumo` |
-| RF07 | Registrar reposición de stock | `InventarioService.registrarReposicion` |
-| RF08 | Alerta cuando el stock cae al mínimo o por debajo | `Insumo.isAlertaStockMinimo`, `InventarioService.consultarAlertasStockMinimo` |
-
-RF05 (consultar historial clínico multi-sucursal), RF09 (reportes
-gerenciales) y RF10 (gestión de usuarios y roles) quedan fuera del alcance
-de este prototipo, tal como se explicita en la sección 3.3 del informe
-("fuera del alcance de esta entrega").
 
 ## Puesta en marcha
 
-### 1. Crear la base de datos
+### 1. Base de datos (como `root`)
 
 ```bash
-mysql -u root -p < sql/vetgest_db.sql
+mysql -u root -p < sql/01_creacion_tablas.sql
+mysql -u root -p < sql/02_insercion_datos.sql
+mysql -u root -p < sql/06_usuario_aplicacion.sql
+mysql -u root -p < sql/07_mejoras_ap3.sql
 ```
 
-Esto crea `vetgest_db` con sus 7 tablas y datos de ejemplo: 2 clientes, 2
-mascotas, 2 veterinarios y 4 insumos (uno de ellos, *Suero fisiológico
-500ml*, ya arranca por debajo de su stock mínimo a propósito, para poder
-observar una alerta preexistente).
+Los scripts `03`, `04` y `05` son de consulta, actualización y pruebas de integridad (AP2). El `05` debe ejecutarse con `mysql --force` porque todas sus sentencias fallan a propósito.
 
-### 2. Configurar la conexión
+### 2. Conexión
 
-Editar `src/main/resources/config.properties`:
+Copiar `db.properties.example` como `db.properties` en la raíz del proyecto y completar la clave del usuario `vetgest_app`.
 
-```properties
-db.url=jdbc:mysql://localhost:3306/vetgest_db?useSSL=false&serverTimezone=UTC
-db.usuario=root
-db.contrasenia=tu_contrasenia
-```
-
-### 3. Compilar y ejecutar
+### 3. Compilar, probar y ejecutar
 
 ```bash
-mvn clean package
-java -jar target/vetgest-prototipo.jar
+mvn test                                   # 35 pruebas unitarias
+mvn compile exec:java                      # menú interactivo
+mvn package && java -jar target/vetgest.jar --demo
 ```
 
-El programa ejecuta automáticamente el escenario de prueba end-to-end
-descripto en la sección 8.1/8.2 del informe:
+Argumentos de `MainApp`:
 
-1. Reserva un turno (Firulais con la Dra. Rodríguez).
-2. Intenta reservar otro turno para el mismo veterinario y horario →
-   **rechazado** (RF02).
-3. Confirma y atiende el turno original (se genera la historia clínica).
-4. Registra el consumo de 2 dosis de "Vacuna antirrábica" asociado a esa
-   atención → dispara alerta de stock mínimo (RF08).
-5. Consulta y muestra todos los insumos en alerta de stock mínimo.
+| Argumento | Efecto |
+|---|---|
+| `--memoria` | Usa los DAO en memoria con los datos de prueba (no requiere MySQL) |
+| `--demo` | Ejecuta el escenario end-to-end automático y termina |
+| `--hoy=AAAA-MM-DD` | Simula la fecha actual (útil para demostraciones) |
 
+Si no encuentra `db.properties` o MySQL no responde, el programa avisa y continúa en modo memoria.
 
-## Referencias
+Desde el IDE (IntelliJ IDEA, NetBeans o Eclipse): abrir la carpeta como proyecto Maven y ejecutar `ar.edu.vetgest.app.MainApp`.
 
-Kendall, K., & Kendall, J. (2011). *Análisis y diseño de sistemas* (8.a
-ed.). Pearson Education.
+### Sin Maven
+
+```bash
+javac --release 17 -encoding UTF-8 -d out $(find src/main/java -name "*.java")
+java -cp out ar.edu.vetgest.app.MainApp --memoria
+```
+
+## Conceptos de POO aplicados
+
+| Concepto | Dónde |
+|---|---|
+| Abstracción | `Persona`, `Mascota`, `MovimientoInventario`, `Menu` (clases abstractas); interfaces DAO y `FabricaDAO` |
+| Encapsulamiento | Atributos privados validados; el turno solo cambia de estado con `cambiarEstado()`; copias defensivas |
+| Herencia | `Cliente`/`Veterinario` → `Persona`; `Canino`/`Felino`/`Exotico` → `Mascota`; `Consumo`/`Reposicion` → `MovimientoInventario`; submenús → `Menu`; `RelojSimulado` → `java.time.Clock` |
+| Polimorfismo | Duración de consulta por especie, `getDelta()` de cada movimiento, `toString()` de `Persona`, DAO JDBC o en memoria elegidos en ejecución |
+| Excepciones | Jerarquía propia no comprobada, `try-with-resources`, `commit`/`rollback`, multi-catch, validación de entradas |
+| Estructuras de datos | Lista enlazada (tablas en memoria), cola FIFO (sala de espera), pila (deshacer y bitácora) |
+| Algoritmos | Merge sort, inserción (FEFO), búsqueda binaria por DNI, búsqueda lineal por nombre |
+
+## Requerimientos cubiertos
+
+RF01 a RF09 implementados en servicios y menú; RF10 con menú según rol (la autenticación con bcrypt se incorpora con la interfaz gráfica).
