@@ -1,0 +1,16 @@
+# Compilacion
+target/
+out/
+*.class
+
+# Configuracion local con credenciales
+db.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+nbproject/private/
