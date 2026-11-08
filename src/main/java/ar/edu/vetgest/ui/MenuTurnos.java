@@ -4,14 +4,17 @@ import ar.edu.vetgest.modelo.Cliente;
 import ar.edu.vetgest.modelo.Mascota;
 import ar.edu.vetgest.modelo.Turno;
 import ar.edu.vetgest.modelo.Veterinario;
+import ar.edu.vetgest.servicio.Exportacion;
+import ar.edu.vetgest.servicio.GrillaDisponibilidad;
 import ar.edu.vetgest.servicio.TurnoService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
-/** CU01 a CU05: alta de pacientes y gestion de la agenda (rol RECEPCION). */
+/** CU01 a CU05: alta de pacientes, gestion de la agenda, grilla de disponibilidad y exportacion (rol RECEPCION). */
 public class MenuTurnos extends Menu {
 
     public MenuTurnos(Consola consola, Sesion sesion) {
@@ -28,7 +31,9 @@ public class MenuTurnos extends Menu {
                 "Cancelar turno (CU02)",
                 "Marcar turno como ausente",
                 "Deshacer la ultima reserva de la sesion",
-                "Agenda del dia de la sucursal (CU05)"};
+                "Agenda del dia de la sucursal (CU05)",
+                "Grilla de disponibilidad del dia (arreglos)",
+                "Exportar la agenda del dia a CSV (archivo)"};
     }
 
     @Override
@@ -42,6 +47,8 @@ public class MenuTurnos extends Menu {
             case 6 -> mostrarResultado("marcado como ausente", sesion.turnos().marcarAusente(leerNumeroTurno()));
             case 7 -> mostrarResultado("cancelado (deshacer)", sesion.turnos().deshacerUltimaReserva());
             case 8 -> agenda();
+            case 9 -> grilla();
+            case 10 -> exportarAgenda();
             default -> throw new IllegalStateException("Opcion no contemplada: " + opcion);
         }
     }
@@ -98,6 +105,29 @@ public class MenuTurnos extends Menu {
         LocalDate fecha = consola.leerFecha("Fecha dd/mm/aaaa [Enter = hoy]: ", hoy());
         consola.println("  Agenda de " + sesion.getSucursal().getNombre() + " del " + fecha.format(Consola.FECHA) + ":");
         Formato.agenda(consola, sesion.turnos().agenda(sesion.getSucursal().getId(), fecha));
+    }
+
+    private void grilla() {
+        LocalDate fecha = consola.leerFecha("Fecha dd/mm/aaaa [Enter = hoy]: ", hoy());
+        GrillaDisponibilidad grilla = sesion.turnos().grilla(sesion.getSucursal().getId(), fecha);
+        consola.println("  Ocupacion de " + sesion.getSucursal().getNombre() + " el " + fecha.format(Consola.FECHA)
+                + " (# ocupado, . libre; cada caracter = " + GrillaDisponibilidad.MINUTOS_FRANJA + " min)");
+        Formato.grilla(consola, grilla);
+        if (consola.confirmar("Ver los horarios libres de un veterinario/a? (s/n): ")) {
+            Veterinario vet = elegirVeterinario();
+            int duracion = consola.leerEntero("Duracion en minutos: ", Turno.DURACION_MINIMA, Turno.DURACION_MAXIMA);
+            List<LocalTime> libres = sesion.turnos().horariosLibres(grilla, vet.getId(), duracion);
+            consola.println("  " + libres.size() + " horario(s) libre(s) de " + duracion + " min para "
+                    + vet.getNombreCompleto() + ":");
+            Formato.horarios(consola, libres);
+        }
+    }
+
+    private void exportarAgenda() {
+        LocalDate fecha = consola.leerFecha("Fecha dd/mm/aaaa [Enter = hoy]: ", hoy());
+        Exportacion e = sesion.reportes().exportarAgenda(sesion.getSucursal(), fecha);
+        consola.ok("Agenda guardada en " + e.archivo().toAbsolutePath() + " (" + e.filas() + " turno(s))");
+        registrar("Exportacion de la agenda del " + fecha.format(Consola.FECHA) + " a " + e.archivo().getFileName());
     }
 
     private int leerNumeroTurno() {

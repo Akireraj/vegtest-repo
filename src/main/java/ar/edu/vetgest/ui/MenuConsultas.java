@@ -5,6 +5,7 @@ import ar.edu.vetgest.modelo.Cliente;
 import ar.edu.vetgest.modelo.Mascota;
 import ar.edu.vetgest.modelo.Persona;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +25,8 @@ public class MenuConsultas extends Menu {
                 "Clientes ordenados por apellido (merge sort)",
                 "Historial clinico de una mascota (CU07)",
                 "Personas de la red: clientes y veterinarios",
-                "Bitacora de la sesion (pila: lo mas reciente primero)"};
+                "Bitacora de la sesion (pila: lo mas reciente primero)",
+                "Abrir un reporte CSV guardado (archivo)"};
     }
 
     @Override
@@ -39,8 +41,24 @@ public class MenuConsultas extends Menu {
             }
             case 5 -> personas();
             case 6 -> sesion.bitacora().ultimos(15).forEach(e -> consola.println("  " + e));
+            case 7 -> abrirReporte();
             default -> throw new IllegalStateException("Opcion no contemplada: " + opcion);
         }
+    }
+
+    private void abrirReporte() {
+        List<Path> archivos = sesion.reportes().reportesGuardados();
+        if (archivos.isEmpty()) {
+            consola.println("  No hay reportes en la carpeta " + sesion.reportes().getCarpeta().toAbsolutePath());
+            return;
+        }
+        for (int i = 0; i < archivos.size(); i++) {
+            consola.printf("  %d) %s%n", i + 1, archivos.get(i).getFileName());
+        }
+        Path elegido = archivos.get(consola.leerEntero("Reporte: ", 1, archivos.size()) - 1);
+        List<String[]> filas = sesion.reportes().abrir(elegido);
+        Formato.tabla(consola, filas);
+        consola.println("  " + Math.max(0, filas.size() - 1) + " fila(s) de datos recuperadas de " + elegido.getFileName());
     }
 
     private void buscarCliente() {

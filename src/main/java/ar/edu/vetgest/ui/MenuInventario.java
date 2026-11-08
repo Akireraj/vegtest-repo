@@ -3,6 +3,7 @@ package ar.edu.vetgest.ui;
 import ar.edu.vetgest.modelo.AlertaStock;
 import ar.edu.vetgest.modelo.Insumo;
 import ar.edu.vetgest.modelo.LoteInsumo;
+import ar.edu.vetgest.servicio.Exportacion;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,7 +24,8 @@ public class MenuInventario extends Menu {
                 "Registrar reposicion de un lote existente (CU10)",
                 "Ingresar un lote nuevo (CU10)",
                 "Alertas de stock minimo de la red, por criticidad (CU11)",
-                "Lotes vencidos o que vencen en " + DIAS_AVISO_VENCIMIENTO + " dias"};
+                "Lotes vencidos o que vencen en " + DIAS_AVISO_VENCIMIENTO + " dias",
+                "Exportar las alertas de stock a CSV (archivo)"};
     }
 
     @Override
@@ -34,6 +36,7 @@ public class MenuInventario extends Menu {
             case 3 -> loteNuevo();
             case 4 -> alertas();
             case 5 -> Formato.lotes(consola, sesion.inventario().lotesPorVencer(idSucursal(), DIAS_AVISO_VENCIMIENTO), hoy());
+            case 6 -> exportarAlertas();
             default -> throw new IllegalStateException("Opcion no contemplada: " + opcion);
         }
     }
@@ -69,6 +72,12 @@ public class MenuInventario extends Menu {
         for (AlertaStock a : alertas) {
             consola.println("  " + a);
         }
+    }
+
+    private void exportarAlertas() {
+        Exportacion e = sesion.reportes().exportarAlertas();
+        consola.ok("Alertas guardadas en " + e.archivo().toAbsolutePath() + " (" + e.filas() + " alerta(s))");
+        registrar("Exportacion de alertas de stock a " + e.archivo().getFileName());
     }
 
     private int idSucursal() {

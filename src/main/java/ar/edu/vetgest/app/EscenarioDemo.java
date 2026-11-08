@@ -5,22 +5,29 @@ import ar.edu.vetgest.excepcion.ReglaNegocioException;
 import ar.edu.vetgest.excepcion.VetGestException;
 import ar.edu.vetgest.modelo.AlertaStock;
 import ar.edu.vetgest.modelo.Cliente;
+import ar.edu.vetgest.modelo.EstadoTurno;
 import ar.edu.vetgest.modelo.HistoriaClinica;
 import ar.edu.vetgest.modelo.Insumo;
 import ar.edu.vetgest.modelo.Mascota;
 import ar.edu.vetgest.modelo.Persona;
+import ar.edu.vetgest.modelo.Sucursal;
 import ar.edu.vetgest.modelo.Turno;
 import ar.edu.vetgest.servicio.Bitacora;
+import ar.edu.vetgest.servicio.Exportacion;
+import ar.edu.vetgest.servicio.GrillaDisponibilidad;
 import ar.edu.vetgest.servicio.HistoriaClinicaService;
 import ar.edu.vetgest.servicio.InventarioService;
 import ar.edu.vetgest.servicio.PacienteService;
+import ar.edu.vetgest.servicio.ReporteService;
 import ar.edu.vetgest.servicio.ResultadoConsumo;
 import ar.edu.vetgest.servicio.SalaEsperaService;
 import ar.edu.vetgest.servicio.TurnoService;
+import ar.edu.vetgest.ui.Sesion;
 import ar.edu.vetgest.util.RelojSimulado;
 
 import java.io.PrintStream;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -61,6 +68,8 @@ public class EscenarioDemo {
     private final InventarioService inventario;
     private final SalaEsperaService sala;
     private final PacienteService pacientes;
+    private final ReporteService reportes;
+    private final FabricaDAO fabrica;
     private final Bitacora bitacora;
     private int numeroPaso;
 
@@ -72,6 +81,8 @@ public class EscenarioDemo {
         this.inventario = new InventarioService(fabrica.inventario(), reloj);
         this.sala = new SalaEsperaService(fabrica.turnos(), reloj);
         this.pacientes = new PacienteService(fabrica.catalogo());
+        this.reportes = new ReporteService(turnos, inventario, Path.of(Sesion.CARPETA_REPORTES), reloj);
+        this.fabrica = fabrica;
         this.bitacora = new Bitacora(reloj);
         out.println("Escenario de demostracion sobre: " + fabrica.descripcion());
     }
@@ -116,6 +127,14 @@ public class EscenarioDemo {
         ok("Reservado " + erroneo);
         ok("Deshacer -> " + turnos.deshacerUltimaReserva());
 
+        paso("Grilla de disponibilidad del dia: boolean[][] e int[] construidos desde un ArrayList");
+        GrillaDisponibilidad grilla = turnos.grilla(CENTRO, dia);
+        imprimirGrilla(grilla);
+        List<LocalTime> libres = turnos.horariosLibres(grilla, DRA_GOMEZ, 30);
+        ok(libres.size() + " horarios libres de 30 min para la Dra. Gomez; entre 09:30 y 11:30: "
+                + libres.stream().filter(h -> !h.isBefore(LocalTime.of(9, 30)) && !h.isAfter(LocalTime.of(11, 30)))
+                .map(h -> h.format(DateTimeFormatter.ofPattern("HH:mm"))).toList());
+
         paso("Llegada de pacientes a la sala de espera (cola FIFO por veterinario)");
         reloj.ajustarA(dia.atTime(9, 45));
         out.println("  Reloj simulado: " + LocalDateTime.now(reloj).format(FMT));
@@ -147,6 +166,20 @@ public class EscenarioDemo {
             out.println("  " + a);
         }
 
+        paso("Reportes en archivos CSV: guardar y recuperar (RF09)");
+        Sucursal centro = fabrica.catalogo().listarSucursales().stream().filter(x -> x.getId() == CENTRO)
+                .findFirst().orElseThrow();
+        Exportacion agenda = reportes.exportarAgenda(centro, dia);
+        ok("Agenda guardada en " + agenda.archivo() + " (" + agenda.filas() + " turnos)");
+        Exportacion alertas = reportes.exportarAlertas();
+        ok("Alertas guardadas en " + alertas.archivo() + " (" + alertas.filas() + " alertas)");
+        List<String[]> recuperadas = reportes.abrir(agenda.archivo());
+        out.println("  Recuperado de " + agenda.archivo().getFileName() + ": " + (recuperadas.size() - 1)
+                + " filas de " + recuperadas.get(0).length + " columnas");
+        for (int i = 0; i < Math.min(3, recuperadas.size()); i++) {
+            out.println("    " + String.join(" | ", recuperadas.get(i)));
+        }
+
         paso("Busqueda binaria por DNI y busqueda lineal por nombre");
         Optional<Cliente> cliente = pacientes.buscarClientePorDni("29555666");
         ok("DNI 29555666 -> " + cliente.map(Cliente::toString).orElse("no encontrado"));
@@ -172,6 +205,24 @@ public class EscenarioDemo {
     }
 
     // ------------------------------------------------------------------ auxiliares
+    private void imprimirGrilla(GrillaDisponibilidad g) {
+        StringBuilder cabecera = new StringBuilder();
+        for (int franja = 0; franja < GrillaDisponibilidad.FRANJAS; franja += 4) {
+            cabecera.append(String.format("%02d  ", GrillaDisponibilidad.horaDeFranja(franja).getHour()));
+        }
+        out.printf("  %-15s %s%n", "", cabecera);
+        for (int i = 0; i < g.cantidadFilas(); i++) {
+            out.printf("  %-15s %s %3d%%%n", g.getVeterinarios()[i].getNombreCompleto(), g.filaComoTexto(i),
+                    g.porcentajeOcupacion(i));
+        }
+        int[] porEstado = g.getTurnosPorEstado();
+        StringBuilder resumen = new StringBuilder("  Turnos por estado (int[]):");
+        for (EstadoTurno e : EstadoTurno.values()) {
+            resumen.append(' ').append(e).append('=').append(porEstado[e.ordinal()]);
+        }
+        out.println(resumen);
+    }
+
     private void consumir(HistoriaClinica h, int idInsumo, int cantidad) {
         try {
             ResultadoConsumo r = inventario.registrarConsumo(h.getIdHistoria(), idInsumo, CENTRO, cantidad, USR_DRA_GOMEZ);

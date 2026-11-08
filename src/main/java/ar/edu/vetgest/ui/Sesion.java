@@ -7,13 +7,18 @@ import ar.edu.vetgest.servicio.Bitacora;
 import ar.edu.vetgest.servicio.HistoriaClinicaService;
 import ar.edu.vetgest.servicio.InventarioService;
 import ar.edu.vetgest.servicio.PacienteService;
+import ar.edu.vetgest.servicio.ReporteService;
 import ar.edu.vetgest.servicio.SalaEsperaService;
 import ar.edu.vetgest.servicio.TurnoService;
 
+import java.nio.file.Path;
 import java.time.Clock;
 
 /** Contexto de trabajo: usuario, sucursal y servicios construidos sobre la fabrica de DAO elegida. */
 public class Sesion {
+
+    /** Carpeta, relativa al directorio de ejecucion, donde se guardan los reportes CSV. */
+    public static final String CARPETA_REPORTES = "reportes";
 
     private final Usuario usuario;
     private final Sucursal sucursal;
@@ -24,6 +29,7 @@ public class Sesion {
     private final InventarioService inventario;
     private final SalaEsperaService salaEspera;
     private final PacienteService pacientes;
+    private final ReporteService reportes;
     private final Bitacora bitacora;
 
     public Sesion(Usuario usuario, Sucursal sucursal, FabricaDAO fabrica, Clock reloj) {
@@ -36,6 +42,7 @@ public class Sesion {
         this.inventario = new InventarioService(fabrica.inventario(), reloj);
         this.salaEspera = new SalaEsperaService(fabrica.turnos(), reloj);
         this.pacientes = new PacienteService(fabrica.catalogo());
+        this.reportes = new ReporteService(turnos, inventario, Path.of(CARPETA_REPORTES), reloj);
         this.bitacora = new Bitacora(reloj);
     }
 
@@ -73,6 +80,10 @@ public class Sesion {
 
     public SalaEsperaService salaEspera() {
         return salaEspera;
+    }
+
+    public ReporteService reportes() {
+        return reportes;
     }
 
     public PacienteService pacientes() {

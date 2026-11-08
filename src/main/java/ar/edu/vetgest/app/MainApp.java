@@ -61,7 +61,7 @@ public final class MainApp {
         Consola consola = new Consola();
         int codigoSalida = 0;
         try {
-            consola.titulo("VetGest - PatasSanas | Prototipo AP3 (Java + MySQL)");
+            consola.titulo("VetGest - PatasSanas | Proyecto integrador AP4 (Java + MySQL)");
             FabricaDAO fabrica = elegirFabrica(memoria, reloj, consola);
             if (demo) {
                 new EscenarioDemo(fabrica, reloj, System.out).ejecutar();

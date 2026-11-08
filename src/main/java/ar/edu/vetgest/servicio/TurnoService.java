@@ -10,12 +10,14 @@ import ar.edu.vetgest.modelo.EstadoTurno;
 import ar.edu.vetgest.modelo.ItemAgenda;
 import ar.edu.vetgest.modelo.Mascota;
 import ar.edu.vetgest.modelo.Turno;
+import ar.edu.vetgest.modelo.Veterinario;
 
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -130,6 +132,35 @@ public class TurnoService {
     public List<ItemAgenda> agenda(int idSucursal, LocalDate fecha) {
         return Ordenamiento.mergeSort(turnoDAO.agenda(idSucursal, fecha),
                 Comparator.comparing((ItemAgenda i) -> i.turno().getFechaHora()).thenComparing(ItemAgenda::veterinario));
+    }
+
+    /**
+     * Grilla de ocupacion del dia (arreglos): una fila por veterinario de la
+     * sucursal y por cada profesional de otra sede que tenga turnos en ella.
+     */
+    public GrillaDisponibilidad grilla(int idSucursal, LocalDate fecha) {
+        List<ItemAgenda> agenda = turnoDAO.agenda(idSucursal, fecha);
+        List<Veterinario> filas = new ArrayList<>();
+        for (Veterinario v : catalogoDAO.listarVeterinarios()) {
+            if (v.getIdSucursal() == idSucursal) {
+                filas.add(v);
+            }
+        }
+        for (ItemAgenda item : agenda) {
+            int idVet = item.turno().getIdVeterinario();
+            if (filas.stream().noneMatch(v -> v.getId() == idVet)) {
+                catalogoDAO.buscarVeterinario(idVet).ifPresent(filas::add);
+            }
+        }
+        return new GrillaDisponibilidad(fecha, filas, agenda);
+    }
+
+    /** Horarios libres del dia segun la grilla, sin incluir los que ya pasaron. */
+    public List<LocalTime> horariosLibres(GrillaDisponibilidad grilla, int idVeterinario, int duracion) {
+        List<LocalTime> libres = grilla.horariosLibres(idVeterinario, duracion);
+        LocalDateTime ahora = LocalDateTime.now(reloj);
+        libres.removeIf(hora -> !grilla.getDia().atTime(hora).isAfter(ahora));
+        return libres;
     }
 
     public Turno obtener(int idTurno) {
