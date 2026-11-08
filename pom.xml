@@ -6,10 +6,10 @@
 
     <groupId>ar.edu.vetgest</groupId>
     <artifactId>vetgest</artifactId>
-    <version>3.0.0</version>
+    <version>4.0.0</version>
     <packaging>jar</packaging>
 
-    <name>VetGest - Prototipo AP3 (PatasSanas)</name>
+    <name>VetGest - Proyecto integrador AP4 (PatasSanas)</name>
     <description>Gestion de turnos, historias clinicas e inventario para la red PatasSanas (Java 17 + MySQL 8)</description>
 
     <properties>
